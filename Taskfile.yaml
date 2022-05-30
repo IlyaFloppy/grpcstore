@@ -1,0 +1,115 @@
+# https://taskfile.dev
+
+version: '3'
+
+silent: true
+
+vars:
+  GO_FILES:
+    sh: find . -type f -name '*.go' -not -path "./vendor/*" -not -path "*.pb.go" -not -path "*.pb.gw.go" -not -path "*generated*.go" | tr "\n" " "
+
+tasks:
+  tools:
+    desc: Install dev tools
+    cmds:
+      - go install github.com/golang/mock/mockgen@v1.6.0
+
+  tidy:
+    desc: Clean the go.mod
+    cmds:
+      - echo "- Cleaning up go.mod"
+      - go mod tidy
+
+  format:
+    desc: Format the source
+    cmds:
+      - echo "- Formatting the codebase"
+      - go fmt ./...
+      - gci write -s standard -s default -s "prefix(github.com/IlyaFloppy/grpcstore)" {{.GO_FILES}}
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - echo "- Running the tests"
+      - go test -v -race -cpu=1,2,4 -coverprofile=coverage.out ./...
+
+  test-build:
+    desc: Test if the project builds
+    cmds:
+      - echo "- Testing if the project builds"
+      - go build -o /dev/null ./cmd/grpcstore
+
+  lint:
+    desc: Run linter against codebase
+    cmds:
+      - echo "- Running linter"
+      - golangci-lint run
+
+  check:
+    desc: Check
+    cmds:
+      - echo "- Check"
+      - task: tidy
+      - task: format
+      - task: test-build
+      - task: lint
+      - task: unit
+
+  generate:
+    desc: Generate code
+    cmds:
+      - echo "- Generating code"
+      - go generate ./...
+      - task: generate-proto
+      - task: format
+
+  generate-proto:
+    desc: Generate proto code
+    cmds:
+      - echo "- Generating proto code"
+      - task: generate-grpc-service
+        vars: {
+          INPUT_DIRS: "public-api",
+          PROTO_DIR: "public-api",
+          OUT_DIR: "public-api/pb"
+        }
+      - silent: false
+  
+  generate-grpc-service:
+    desc: Generate grpc service from PROTO_DIR passing INPUT_DIRS to protoc and writing output files into OUT_DIR.
+    cmds:
+      - mkdir -p {{.OUT_DIR}}
+      - |
+        protoc \
+        -I $(go env GOPATH)/src \
+        {{if .INPUT_DIRS -}}
+        {{range $i, $path := splitList ";" .INPUT_DIRS -}}
+        {{printf "-I %s \\" $path }}
+        {{end -}}
+        {{end -}}
+        --go_out={{.OUT_DIR}} \
+        --go-grpc_out={{.OUT_DIR}} \
+        {{.PROTO_DIR}}/*.proto
+    silent: false
+
+  demo:
+    desc: Demo
+    ignore_error: true
+    cmds:
+      - docker stop demo-memcache
+      - docker rm demo-memcache
+      - docker run -p 11211:11211 --name demo-memcache -d memcached memcached -m 64
+      - go run ./cmd/grpcstore -config=config.yaml
+      - docker stop demo-memcache
+      - docker rm demo-memcache
+
+  todo:
+    desc: List all TODO comments
+    cmds:
+      - find . -type f -name "*.go" -exec cat {} \; | grep '// TODO:'
+
+  loc:
+    desc: Count LOC
+    cmds:
+      - echo "go:"; ( find ./ -name '*.go' -print0 | xargs -0 cat ) | wc -l
+      - echo "proto:"; ( find ./ -name '*.proto' -print0 | xargs -0 cat ) | wc -l

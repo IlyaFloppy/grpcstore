@@ -1,0 +1,40 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  disable-all: true
+  enable:
+    - cyclop
+    - deadcode
+    - decorder
+    - dupl
+    - errcheck
+    - exhaustive
+    - exportloopref
+    - gci
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - gosec
+    - goimports
+    - govet
+    - importas
+    - ineffassign
+    - nilnil
+    - nolintlint
+    - prealloc
+    # - revive
+    - varcheck
+    - whitespace
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters-settings:
+  gci:
+    local-prefixes: github.com/IlyaFloppy/grpcstore

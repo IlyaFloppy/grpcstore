@@ -1,0 +1,18 @@
+logger:
+    level: debug # trace | debug | info | warn | error | fatal | panic
+    console: true
+
+server:
+    address: "localhost:4242"
+    keep_alive_time: 1h0m0s
+    keep_alive_timeout: 1h0m0s
+    write_buffer_size: 1048576 # 1MB
+    read_buffer_size: 1048576 # 1MB
+
+storage:
+    use_memcached: true
+    inmemory: {}
+    memcached:
+        address: "localhost:11211"
+        use_pool: true
+        pool_size: 64
